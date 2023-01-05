@@ -3,12 +3,16 @@ import Filter from "./components/Filter";
 import PersonForm from "./components/PersonForm";
 import Persons from "./components/Persons";
 import personService from "./services/person";
+import Notification from "./components/Notification";
+import "./index.css";
 
 const App = () => {
   const [persons, setPersons] = useState([]);
   const [newName, setNewName] = useState("");
   const [newNumber, setNewNumber] = useState("");
   const [filter, setNewFilter] = useState("");
+  const [message, setMessage] = useState(null);
+  const [success, setSuccess] = useState("");
 
   useEffect(() => {
     personService.getAll().then((response) => {
@@ -19,7 +23,10 @@ const App = () => {
   const addPerson = (event) => {
     event.preventDefault();
     if (newName === "" || newNumber === "") {
-      alert("Please enter a name or number.");
+      setMessage("Please enter a name or number...");
+      setTimeout(() => {
+        setMessage(null);
+      }, 5000);
     } else if (persons.find((person) => newName === person.name)) {
       const temp = persons.find((person) => newName === person.name);
       const changedPerson = { ...temp, number: newNumber };
@@ -30,7 +37,14 @@ const App = () => {
       ) {
         personService
           .update(changedPerson.id, changedPerson)
-          .catch((error) => alert("Could not submit..."))
+          .catch((error) => {
+            setSuccess("error");
+            setMessage(`${changedPerson.name} could not be updated...`);
+            setTimeout(() => {
+              setMessage(null);
+              setSuccess("");
+            }, 5000);
+          })
           .then((returnedPerson) => {
             setPersons(
               persons.map((person) =>
@@ -39,6 +53,12 @@ const App = () => {
             );
             setNewName("");
             setNewNumber("");
+            setSuccess("success");
+            setMessage(`${returnedPerson.name} updated...`);
+            setTimeout(() => {
+              setMessage(null);
+              setSuccess("");
+            }, 5000);
           });
       }
     } else {
@@ -47,13 +67,17 @@ const App = () => {
         name: newName,
         number: newNumber,
       };
-      personService
-        .create(personObject)
-        .then(
-          setPersons(persons.concat(personObject)),
-          setNewName(""),
-          setNewNumber("")
-        );
+      personService.create(personObject).then(
+        setPersons(persons.concat(personObject)),
+        setNewName(""),
+        setNewNumber(""),
+        setSuccess("success"),
+        setMessage(`${personObject.name} added...`),
+        setTimeout(() => {
+          setMessage(null);
+          setSuccess("");
+        }, 5000)
+      );
     }
   };
 
@@ -61,8 +85,23 @@ const App = () => {
     if (window.confirm(`Do you want to remove ${person.name}?`)) {
       personService
         .remove(person.id)
-        .catch((error) => alert(`${person.name} was already removed...`))
-        .then(setPersons(persons.filter((p) => p.id !== person.id)));
+        .catch((error) => {
+          setSuccess("error");
+          setMessage(`${person.name} was already removed...`);
+          setTimeout(() => {
+            setMessage(null);
+            setSuccess("");
+          }, 5000);
+        })
+        .then(
+          setPersons(persons.filter((p) => p.id !== person.id)),
+          setSuccess("success"),
+          setMessage(`${person.name} removed...`),
+          setTimeout(() => {
+            setMessage(null);
+            setSuccess("");
+          }, 5000)
+        );
     }
   };
 
@@ -81,6 +120,7 @@ const App = () => {
   return (
     <div>
       <h2>Phonebook</h2>
+      <Notification message={message} success={success}/>
       <Filter filter={filter} handleFilterChange={handleFilterChange} />
       <h2>add a new</h2>
       <PersonForm
